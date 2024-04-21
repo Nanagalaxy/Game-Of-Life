@@ -1,0 +1,78 @@
+{
+    "build": {
+        "beforeDevCommand": "pnpm dev:vite",
+        "beforeBuildCommand": "pnpm build:vite",
+        "devPath": "http://localhost:1420",
+        "distDir": "../dist",
+        "withGlobalTauri": true
+    },
+    "package": {
+        "productName": "game-of-life",
+        "version": "../package.json"
+    },
+    "tauri": {
+        "allowlist": {
+            "all": false,
+            "shell": {
+                "all": false,
+                "open": true
+            },
+            "dialog": {
+                "all": false,
+                "ask": false,
+                "confirm": false,
+                "message": true,
+                "open": false,
+                "save": false
+            }
+        },
+        "windows": [
+            {
+                "title": "Game Of Life",
+                "label": "main",
+                "center": false,
+                "width": 800,
+                "height": 600,
+                "url": "index.html",
+                "visible": true,
+                "focus": false,
+                "fullscreen": false,
+                "maximized": true
+            }
+        ],
+        "security": {
+            "csp": null
+        },
+        "bundle": {
+            "active": true,
+            "targets": "all",
+            "identifier": "com.game-of-life.dev",
+            "icon": [
+                "icons/32x32.png",
+                "icons/128x128.png",
+                "icons/128x128@2x.png",
+                "icons/icon.icns",
+                "icons/icon.ico"
+            ],
+            "windows": {
+                "allowDowngrades": true,
+                "certificateThumbprint": null,
+                "digestAlgorithm": null,
+                "nsis": {
+                    "languages": ["English", "French"],
+                    "displayLanguageSelector": true
+                },
+                "timestampUrl": null,
+                "tsp": false,
+                "webviewFixedRuntimePath": null,
+                "webviewInstallMode": {
+                    "silent": true,
+                    "type": "downloadBootstrapper"
+                },
+                "wix": {
+                    "language": ["en-US", "fr-FR"]
+                }
+            }
+        }
+    }
+}
