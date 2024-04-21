@@ -1,6 +1,6 @@
 import {LitElement, html, css} from "lit";
 import {customElement, property} from "lit/decorators.js";
-import { uuid } from "../Utils";
+import {uuid} from "../Utils";
 
 @customElement("game-cell")
 export default class GameCell extends LitElement {
@@ -15,6 +15,10 @@ export default class GameCell extends LitElement {
 
     @property({type: String}) readonly id = uuid();
     @property({type: Boolean, reflect: true}) alive = false;
+
+    public toggleAlive(): void {
+        this.alive = !this.alive;
+    }
 
     render() {
         return html`<div></div>`;

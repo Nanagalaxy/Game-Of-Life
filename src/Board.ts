@@ -12,6 +12,8 @@ export default class Board {
 
     private _cells: Cell[] = [];
 
+    public drawMode: DrawType = DrawType.Alive;
+
     private constructor() {
         const board: HTMLDivElement | null = document.querySelector("#board");
 
@@ -20,6 +22,54 @@ export default class Board {
         } else {
             this.board = board;
         }
+
+        let isMouseDown: boolean = false;
+
+        this.board.addEventListener("mousedown", (event: MouseEvent) => {
+            if (event.buttons === 1) {
+                isMouseDown = true;
+
+                const cell: Cell | undefined = this._cells.find(
+                    (cell: Cell) => cell === event.target,
+                );
+
+                if (cell) {
+                    const state: boolean = this.drawMode === DrawType.Alive;
+
+                    if (state !== cell.alive) {
+                        cell.alive = state;
+                    } else {
+                        cell.toggleAlive();
+                    }
+                }
+            }
+        });
+
+        this.board.addEventListener("mouseup", () => {
+            isMouseDown = false;
+        });
+
+        this.board.addEventListener("mouseover", (event: MouseEvent) => {
+            if (isMouseDown && event.buttons === 1) {
+                const cell: Cell | undefined = this._cells.find(
+                    (cell: Cell) => cell === event.target,
+                );
+
+                if (cell) {
+                    cell.alive = this.drawMode === DrawType.Alive;
+                }
+            }
+        });
+
+        this.board.addEventListener("mouseenter", (event: MouseEvent) => {
+            if (event.buttons === 1) {
+                isMouseDown = true;
+            }
+        });
+
+        this.board.addEventListener("mouseleave", () => {
+            isMouseDown = false;
+        });
     }
 
     public static get instance(): Board {
@@ -123,3 +173,8 @@ export type Size = {
     width: number;
     height: number;
 };
+
+export enum DrawType {
+    Dead = 0,
+    Alive = 1,
+}
