@@ -5,7 +5,7 @@
     "author": "Naexy",
     "repository": {
         "type": "git",
-        "url": "github:Nanagalaxy/game-of-life"
+        "url": "github:Nanagalaxy/Game-Of-Life"
     },
     "scripts": {
         "dev:vite": "vite",
