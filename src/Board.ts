@@ -1,16 +1,22 @@
-import Cell from "./Components/Cell";
+import {invoke} from "@tauri-apps/api";
+import Cell from "./Cell";
+import GameCell from "./Components/GameCell";
 
 export default class Board {
     private static _instance: Board;
 
     public readonly board: HTMLDivElement;
 
+    private _running: boolean = false;
+
+    private _sleepTime: number = 100;
+
     private _width: number = 0;
     private _height: number = 0;
 
     private _cellSize: number = 0;
 
-    private _cells: Cell[] = [];
+    private _cells: GameCell[] = [];
 
     public drawMode: DrawType = DrawType.Alive;
 
@@ -29,8 +35,8 @@ export default class Board {
             if (event.buttons === 1) {
                 isMouseDown = true;
 
-                const cell: Cell | undefined = this._cells.find(
-                    (cell: Cell) => cell === event.target,
+                const cell: GameCell | undefined = this._cells.find(
+                    (cell: GameCell) => cell === event.target,
                 );
 
                 if (cell) {
@@ -51,8 +57,8 @@ export default class Board {
 
         this.board.addEventListener("mouseover", (event: MouseEvent) => {
             if (isMouseDown && event.buttons === 1) {
-                const cell: Cell | undefined = this._cells.find(
-                    (cell: Cell) => cell === event.target,
+                const cell: GameCell | undefined = this._cells.find(
+                    (cell: GameCell) => cell === event.target,
                 );
 
                 if (cell) {
@@ -79,6 +85,24 @@ export default class Board {
         return this._instance;
     }
 
+    public get running(): boolean {
+        return this._running;
+    }
+
+    public get sleepTime(): number {
+        return this._sleepTime;
+    }
+
+    public set sleepTime(value: number) {
+        if (value < 0) {
+            throw new Error(
+                `Sleep time must be a positive number, got ${value}`,
+            );
+        }
+
+        this._sleepTime = value;
+    }
+
     public get width(): number {
         return this._width;
     }
@@ -94,32 +118,52 @@ export default class Board {
         };
     }
 
+    public cells(cellVer: CellVersion): GameCell[] | Cell[] {
+        if (cellVer === CellVersion.html) {
+            return this._cells;
+        } else {
+            return this._cells.map((cell: GameCell) => cell.cell);
+        }
+    }
+
     public get cellSize(): number {
         return this._cellSize;
     }
 
-    public get cells(): Cell[] {
-        return this._cells;
-    }
-
     public get cellsIds(): string[] {
-        return this._cells.map((cell: Cell) => cell.id);
+        return this._cells.map((cell: GameCell) => cell.id);
     }
 
-    public get aliveCells(): Cell[] {
-        return this._cells.filter((cell: Cell) => cell.alive);
+    public aliveCells(cellVer: CellVersion): GameCell[] | Cell[] {
+        if (cellVer === CellVersion.html) {
+            return this._cells.filter((cell: GameCell) => cell.alive);
+        } else {
+            return this._cells
+                .filter((cell: GameCell) => cell.alive)
+                .map((cell: GameCell) => cell.cell);
+        }
     }
 
     public get aliveCellsIds(): string[] {
-        return this.aliveCells.map((cell: Cell) => cell.id);
+        return (this.aliveCells(CellVersion.html) as GameCell[]).map(
+            (cell: GameCell) => cell.id,
+        );
     }
 
-    public get deadCells(): Cell[] {
-        return this._cells.filter((cell: Cell) => !cell.alive);
+    public deadCells(cellVer: CellVersion): GameCell[] | Cell[] {
+        if (cellVer === CellVersion.html) {
+            return this._cells.filter((cell: GameCell) => !cell.alive);
+        } else {
+            return this._cells
+                .filter((cell: GameCell) => !cell.alive)
+                .map((cell: GameCell) => cell.cell);
+        }
     }
 
     public get deadCellsIds(): string[] {
-        return this.deadCells.map((cell: Cell) => cell.id);
+        return (this.deadCells(CellVersion.html) as GameCell[]).map(
+            (cell: GameCell) => cell.id,
+        );
     }
 
     public createBoard(size: Size, cellSize: number): void {
@@ -143,6 +187,7 @@ export default class Board {
         this._width = size.width;
         this._height = size.height;
         this._cellSize = cellSize;
+        this._cells = [];
 
         this.board.innerHTML = "";
 
@@ -159,13 +204,67 @@ export default class Board {
         // Create cells
         for (let y = 0; y < size.height; y++) {
             for (let x = 0; x < size.width; x++) {
-                const cell: Cell = new Cell();
+                const cell: GameCell = new GameCell(x, y);
+
+                cell.style.gridRowStart = (size.height - y).toString();
+                cell.style.gridColumnStart = (x + 1).toString();
 
                 this._cells.push(cell);
 
                 this.board.appendChild(cell);
             }
         }
+    }
+
+    public killBoard(): void {
+        this._cells.forEach((cell: GameCell) => {
+            cell.alive = false;
+        });
+    }
+
+    public async step(): Promise<void> {
+        let cells: Cell[] = [];
+
+        await invoke("compute_next_gen", {
+            cells: this.cells(CellVersion.object),
+        })
+            .then((response) => {
+                cells = response as Cell[];
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+
+        this._cells.forEach((cell: GameCell) => {
+            const cellData: Cell | undefined = cells.find(
+                (c: Cell) => c.id === cell.id,
+            );
+
+            if (cellData) {
+                cell.alive = cellData.alive;
+            }
+        });
+    }
+
+    private async sleep(): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, this._sleepTime));
+    }
+
+    private async loop(): Promise<void> {
+        while (this._running) {
+            await this.step();
+
+            await this.sleep();
+        }
+    }
+
+    public run(): void {
+        this._running = true;
+        this.loop();
+    }
+
+    public stop(): void {
+        this._running = false;
     }
 }
 
@@ -175,6 +274,11 @@ export type Size = {
 };
 
 export enum DrawType {
-    Dead = 0,
-    Alive = 1,
+    Dead,
+    Alive,
+}
+
+export enum CellVersion {
+    html,
+    object,
 }
