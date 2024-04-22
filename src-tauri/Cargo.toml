@@ -1,7 +1,7 @@
 [package]
 name = "game-of-life"
-version = "0.0.0"
-description = "An implementation of Conway's Game of Life using Tauri and Vite"
+version = "0.1.0"
+description = "Conway's Game of Life"
 authors = ["Naexy"]
 edition = "2021"
 
