@@ -1,9 +1,10 @@
 pub mod cell {
+    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
     use uuid::Uuid;
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
     pub struct Cell {
         pub id: Uuid,
 
@@ -110,7 +111,7 @@ pub mod cell {
         /// Get the alive neighbors of the cell
         pub fn alive_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
             neighbors
-                .iter()
+                .par_iter()
                 .cloned()
                 .filter(|cell| cell.alive)
                 .collect()
@@ -119,7 +120,7 @@ pub mod cell {
         /// Get the dead neighbors of the cell
         pub fn dead_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
             neighbors
-                .iter()
+                .par_iter()
                 .cloned()
                 .filter(|cell| !cell.alive)
                 .collect()
@@ -153,10 +154,34 @@ pub mod cell {
     }
 }
 
+use self::cell::Cell;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 
-use self::cell::Cell;
-use rayon::prelude::*;
+/// Get the relevant cells for the next generation, i.e. the cells that are alive and their neighbors
+fn get_relevant_cells(cells: Vec<Cell>) -> Vec<Cell> {
+    // Create a HashMap for fast lookup
+    let cells_map: HashMap<(u32, u32), &Cell> = cells
+        .par_iter()
+        .map(|cell| ((cell.x, cell.y), cell))
+        .collect();
+
+    let mut relevant_cells: Vec<Cell> = Vec::new();
+
+    for cell in cells_map.values() {
+        if cell.alive {
+            relevant_cells.push(**cell);
+
+            for neighbor in cell.neighbors(&cells_map) {
+                if !relevant_cells.contains(neighbor) {
+                    relevant_cells.push(*neighbor);
+                }
+            }
+        }
+    }
+
+    relevant_cells
+}
 
 fn cell_future_state(cell: &Cell, neighbors: &Vec<&Cell>) -> bool {
     let alive_neighbors = cell.alive_neighbors(neighbors);
@@ -174,17 +199,19 @@ fn cell_future_state(cell: &Cell, neighbors: &Vec<&Cell>) -> bool {
     }
 }
 
-pub fn compute_next_generation(cells: Vec<Cell>) -> Vec<Cell> {
-    let time = std::time::Instant::now();
+pub fn compute_next_generation(all_cells: Vec<Cell>) -> Vec<Cell> {
+    // Get the relevant cells for the next generation
+    let relevant_cells = get_relevant_cells(all_cells);
 
-    // Create a HashMap for fast lookup
-    let cells_map: HashMap<(u32, u32), &Cell> =
-        cells.iter().map(|cell| ((cell.x, cell.y), cell)).collect();
+    let relevant_cells_map: HashMap<(u32, u32), &Cell> = relevant_cells
+        .par_iter()
+        .map(|cell| ((cell.x, cell.y), cell))
+        .collect();
 
-    let next_generation: Vec<Cell> = cells
+    let next_generation: Vec<Cell> = relevant_cells
         .par_iter()
         .map(|cell| {
-            let neighbors = cell.neighbors(&cells_map);
+            let neighbors = cell.neighbors(&relevant_cells_map);
             let alive = cell_future_state(&cell, &neighbors);
 
             if alive != cell.alive {
@@ -197,8 +224,6 @@ pub fn compute_next_generation(cells: Vec<Cell>) -> Vec<Cell> {
             }
         })
         .collect();
-
-    println!("Next generation computed in {:?}", time.elapsed());
 
     next_generation
 }
