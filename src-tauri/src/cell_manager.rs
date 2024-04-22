@@ -3,17 +3,13 @@ pub mod cell {
     use uuid::Uuid;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[readonly::make]
     pub struct Cell {
-        #[readonly]
         pub id: Uuid,
 
         pub alive: bool,
 
-        #[readonly]
         pub x: u32,
 
-        #[readonly]
         pub y: u32,
     }
 
@@ -82,7 +78,7 @@ pub mod cell {
         ///
         /// assert_eq!(cell.is_some(), true);
         /// ```
-        pub fn find_by_id(cells: Vec<Cell>, id: Uuid) -> Option<Cell> {
+        pub fn find_by_id(cells: &Vec<Cell>, id: Uuid) -> Option<&Cell> {
             for cell in cells {
                 if cell.id == id {
                     return Some(cell);
@@ -106,7 +102,7 @@ pub mod cell {
         ///
         /// assert_eq!(cell.is_some(), true);
         /// ```
-        pub fn find_by_position(cells: Vec<Cell>, x: u32, y: u32) -> Option<Cell> {
+        pub fn find_by_position<'a>(cells: &'a Vec<&Cell>, x: u32, y: u32) -> Option<&'a Cell> {
             for cell in cells {
                 if cell.x == x && cell.y == y {
                     return Some(cell);
@@ -171,7 +167,7 @@ pub mod cell {
         ///
         /// assert_eq!(neighbors.len(), 3);
         /// ```
-        pub fn neighbors(&self, cells: Vec<Cell>) -> Vec<Cell> {
+        pub fn neighbors<'a>(&'a self, cells: &'a Vec<&Cell>) -> Vec<&Cell> {
             let mut neighbors = Vec::new();
 
             for (dx, dy) in NeighborsPosition::get_all() {
@@ -186,7 +182,7 @@ pub mod cell {
                     continue;
                 };
 
-                if let Some(neighbor) = Cell::find_by_position(cells.clone(), offset_x, offset_y) {
+                if let Some(neighbor) = Cell::find_by_position(cells, offset_x, offset_y) {
                     neighbors.push(neighbor);
                 }
             }
@@ -194,16 +190,60 @@ pub mod cell {
             neighbors
         }
 
-        pub fn alive_neighbors(&self, cells: Vec<Cell>) -> Vec<Cell> {
-            self.neighbors(cells)
-                .into_iter()
+        /// Get the alive neighbors of the cell
+        ///
+        /// # Examples
+        /// ```rust
+        /// use cell_manager::cell::Cell;
+        ///
+        /// let cell = Cell::new(true, 0, 0);
+        ///
+        /// let cells = vec![
+        ///    Cell::new(true, 0, 1), // South
+        ///    Cell::new(true, 1, 0), // East
+        ///    Cell::new(true, 1, 1), // South East
+        ///    Cell::new(true, 1, -1), // North East
+        /// ];
+        ///
+        /// let neighbors = cell.get_neighbors(cells);
+        /// let alive_neighbors = cell.alive_neighbors(&neighbors);
+        /// // alive_neighbors contains the cells at (0, 1), (1, 0), (1, 1)
+        ///
+        /// assert_eq!(alive_neighbors.len(), 3);
+        /// ```
+        pub fn alive_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
+            neighbors
+                .iter()
+                .cloned()
                 .filter(|cell| cell.alive)
                 .collect()
         }
 
-        pub fn dead_neighbors(&self, cells: Vec<Cell>) -> Vec<Cell> {
-            self.neighbors(cells)
-                .into_iter()
+        /// Get the dead neighbors of the cell
+        ///
+        /// # Examples
+        /// ```rust
+        /// use cell_manager::cell::Cell;
+        ///
+        /// let cell = Cell::new(true, 0, 0);
+        ///
+        /// let cells = vec![
+        ///    Cell::new(false, 0, 1), // South
+        ///    Cell::new(false, 1, 0), // East
+        ///    Cell::new(false, 1, 1), // South East
+        ///    Cell::new(false, 1, -1), // North East
+        /// ];
+        ///
+        /// let neighbors = cell.get_neighbors(cells);
+        /// let dead_neighbors = cell.dead_neighbors(&neighbors);
+        /// // dead_neighbors contains the cells at (0, 1), (1, 0), (1, 1)
+        ///
+        /// assert_eq!(dead_neighbors.len(), 3);
+        /// ```
+        pub fn dead_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
+            neighbors
+                .iter()
+                .cloned()
                 .filter(|cell| !cell.alive)
                 .collect()
         }
@@ -237,9 +277,10 @@ pub mod cell {
 }
 
 use self::cell::Cell;
+use rayon::prelude::*;
 
-fn cell_future_state(cell: Cell, neighbors: Vec<Cell>) -> bool {
-    let alive_neighbors = cell.alive_neighbors(neighbors.clone());
+fn cell_future_state(cell: &Cell, neighbors: &Vec<&Cell>) -> bool {
+    let alive_neighbors = cell.alive_neighbors(neighbors);
 
     if cell.alive {
         match alive_neighbors.len() {
@@ -255,20 +296,28 @@ fn cell_future_state(cell: Cell, neighbors: Vec<Cell>) -> bool {
 }
 
 pub fn compute_next_generation(cells: Vec<Cell>) -> Vec<Cell> {
-    let mut next_generation = Vec::new();
+    let time = std::time::Instant::now();
 
-    for cell in &cells {
-        let neighbors = cell.neighbors(cells.clone());
-        let alive = cell_future_state(cell.clone(), neighbors);
+    let cell_refs: Vec<&Cell> = cells.iter().collect(); // Convert to reference
 
-        if alive != cell.alive {
-            let mut cell = cell.clone();
-            cell.set_alive(alive);
-            next_generation.push(cell);
-        } else {
-            next_generation.push(cell.clone());
-        }
-    }
+    let next_generation: Vec<Cell> = cells
+        .par_iter()
+        .map(|cell| {
+            let neighbors = cell.neighbors(&cell_refs);
+            let alive = cell_future_state(&cell, &neighbors);
+
+            if alive != cell.alive {
+                Cell {
+                    alive,
+                    ..cell.clone()
+                }
+            } else {
+                cell.clone()
+            }
+        })
+        .collect();
+
+    println!("Next generation computed in {:?}", time.elapsed());
 
     next_generation
 }
