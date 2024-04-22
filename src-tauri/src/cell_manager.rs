@@ -1,5 +1,6 @@
 pub mod cell {
     use serde::{Deserialize, Serialize};
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,85 +61,20 @@ pub mod cell {
         }
 
         /// Find a cell by its ID
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        /// use uuid::Uuid;
-        ///
-        /// let cell = Cell::new(true, 0, 0);
-        ///
-        /// let id = cell.id;
-        ///
-        /// let cells = vec![
-        ///    cell,
-        /// ];
-        ///
-        /// let cell = Cell::find_by_id(cells, id);
-        ///
-        /// assert_eq!(cell.is_some(), true);
-        /// ```
-        pub fn find_by_id(cells: &Vec<Cell>, id: Uuid) -> Option<&Cell> {
-            for cell in cells {
-                if cell.id == id {
-                    return Some(cell);
-                }
-            }
-
-            None
+        pub fn find_by_id<'a>(cells_map: &'a HashMap<Uuid, &Cell>, id: Uuid) -> Option<&'a Cell> {
+            cells_map.get(&id).copied()
         }
 
         /// Find a cell by its position
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        ///
-        /// let cells = vec![
-        ///    Cell::new(true, 0, 0),
-        /// ];
-        ///
-        /// let cell = Cell::find_by_position(cells, 0, 0);
-        ///
-        /// assert_eq!(cell.is_some(), true);
-        /// ```
-        pub fn find_by_position<'a>(cells: &'a Vec<&Cell>, x: u32, y: u32) -> Option<&'a Cell> {
-            for cell in cells {
-                if cell.x == x && cell.y == y {
-                    return Some(cell);
-                }
-            }
-
-            None
+        pub fn find_by_position<'a>(
+            cells_map: &'a HashMap<(u32, u32), &Cell>,
+            x: u32,
+            y: u32,
+        ) -> Option<&'a Cell> {
+            cells_map.get(&(x, y)).copied()
         }
 
         /// Offset the position by the given offset
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        ///
-        /// let x = 0;
-        /// let offset = 1;
-        ///
-        /// let new_x = Cell::offset_position(x, offset);
-        ///
-        /// assert_eq!(new_x, Some(1));
-        ///
-        /// let x = 0;
-        /// let offset = -1;
-        ///
-        /// let new_x = Cell::offset_position(x, offset);
-        ///
-        /// assert_eq!(new_x, None); // Negative position is not allowed
-        ///
-        /// let x = 1;
-        /// let offset = -1;
-        ///
-        /// let new_x = Cell::offset_position(x, offset);
-        ///
-        /// assert_eq!(new_x, Some(0)); // Negative offset is allowed
-        /// ```
         pub fn offset_position(position: u32, offset: i8) -> Option<u32> {
             if offset < 0 {
                 position.checked_sub(offset.abs() as u32)
@@ -148,26 +84,7 @@ pub mod cell {
         }
 
         /// Get the neighbors of the cell
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        ///
-        /// let cell = Cell::new(true, 0, 0);
-        ///
-        /// let cells = vec![
-        ///    Cell::new(true, 0, 1), // South
-        ///    Cell::new(true, 1, 0), // East
-        ///    Cell::new(true, 1, 1), // South East
-        ///    Cell::new(true, 1, -1), // North East
-        /// ];
-        ///
-        /// let neighbors = cell.get_neighbors(cells);
-        /// // neighbors contains the cells at (0, 1), (1, 0), (1, 1)
-        ///
-        /// assert_eq!(neighbors.len(), 3);
-        /// ```
-        pub fn neighbors<'a>(&'a self, cells: &'a Vec<&Cell>) -> Vec<&Cell> {
+        pub fn neighbors<'a>(&'a self, cells_map: &'a HashMap<(u32, u32), &Cell>) -> Vec<&Cell> {
             let mut neighbors = Vec::new();
 
             for (dx, dy) in NeighborsPosition::get_all() {
@@ -182,7 +99,7 @@ pub mod cell {
                     continue;
                 };
 
-                if let Some(neighbor) = Cell::find_by_position(cells, offset_x, offset_y) {
+                if let Some(neighbor) = Self::find_by_position(cells_map, offset_x, offset_y) {
                     neighbors.push(neighbor);
                 }
             }
@@ -191,26 +108,6 @@ pub mod cell {
         }
 
         /// Get the alive neighbors of the cell
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        ///
-        /// let cell = Cell::new(true, 0, 0);
-        ///
-        /// let cells = vec![
-        ///    Cell::new(true, 0, 1), // South
-        ///    Cell::new(true, 1, 0), // East
-        ///    Cell::new(true, 1, 1), // South East
-        ///    Cell::new(true, 1, -1), // North East
-        /// ];
-        ///
-        /// let neighbors = cell.get_neighbors(cells);
-        /// let alive_neighbors = cell.alive_neighbors(&neighbors);
-        /// // alive_neighbors contains the cells at (0, 1), (1, 0), (1, 1)
-        ///
-        /// assert_eq!(alive_neighbors.len(), 3);
-        /// ```
         pub fn alive_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
             neighbors
                 .iter()
@@ -220,26 +117,6 @@ pub mod cell {
         }
 
         /// Get the dead neighbors of the cell
-        ///
-        /// # Examples
-        /// ```rust
-        /// use cell_manager::cell::Cell;
-        ///
-        /// let cell = Cell::new(true, 0, 0);
-        ///
-        /// let cells = vec![
-        ///    Cell::new(false, 0, 1), // South
-        ///    Cell::new(false, 1, 0), // East
-        ///    Cell::new(false, 1, 1), // South East
-        ///    Cell::new(false, 1, -1), // North East
-        /// ];
-        ///
-        /// let neighbors = cell.get_neighbors(cells);
-        /// let dead_neighbors = cell.dead_neighbors(&neighbors);
-        /// // dead_neighbors contains the cells at (0, 1), (1, 0), (1, 1)
-        ///
-        /// assert_eq!(dead_neighbors.len(), 3);
-        /// ```
         pub fn dead_neighbors<'a>(&'a self, neighbors: &'a Vec<&Cell>) -> Vec<&Cell> {
             neighbors
                 .iter()
@@ -276,6 +153,8 @@ pub mod cell {
     }
 }
 
+use std::collections::HashMap;
+
 use self::cell::Cell;
 use rayon::prelude::*;
 
@@ -298,12 +177,14 @@ fn cell_future_state(cell: &Cell, neighbors: &Vec<&Cell>) -> bool {
 pub fn compute_next_generation(cells: Vec<Cell>) -> Vec<Cell> {
     let time = std::time::Instant::now();
 
-    let cell_refs: Vec<&Cell> = cells.iter().collect(); // Convert to reference
+    // Create a HashMap for fast lookup
+    let cells_map: HashMap<(u32, u32), &Cell> =
+        cells.iter().map(|cell| ((cell.x, cell.y), cell)).collect();
 
     let next_generation: Vec<Cell> = cells
         .par_iter()
         .map(|cell| {
-            let neighbors = cell.neighbors(&cell_refs);
+            let neighbors = cell.neighbors(&cells_map);
             let alive = cell_future_state(&cell, &neighbors);
 
             if alive != cell.alive {
