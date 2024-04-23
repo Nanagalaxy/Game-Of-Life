@@ -225,6 +225,14 @@ export default class Board {
     public async step(): Promise<void> {
         let cells: Cell[] = [];
 
+        await invoke("test_new_board")
+            .then((response) => {
+                console.log(response);
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+
         await invoke("compute_next_gen", {
             cells: this.cells(CellVersion.object),
         })
