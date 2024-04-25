@@ -2,16 +2,27 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, Weak};
 use uuid::Uuid;
 
+/// A struct representing a cell
 #[derive(Debug)]
 pub struct Cell {
+    /// The id of the cell
     pub id: Uuid,
+
+    /// Whether the cell is alive or not
     alive: Mutex<bool>,
+
+    /// The x position of the cell
     x: usize,
+
+    /// The y position of the cell
     y: usize,
+
+    /// The list of neighbors of the cell
     neighbors: Mutex<HashMap<(usize, usize), Weak<Cell>>>,
 }
 
 impl Cell {
+    /// Create a new cell
     pub fn new(alive: bool, x: usize, y: usize) -> Arc<Self> {
         Arc::new(Self {
             id: Uuid::new_v4(),
@@ -22,18 +33,22 @@ impl Cell {
         })
     }
 
+    /// Set the alive state of the cell
+    /// `true` if the cell is alive, `false` otherwise
     pub fn set_alive(&self, alive: bool) {
         let mut alive_ref = self.alive.lock().unwrap();
 
         *alive_ref = alive;
     }
 
+    /// Add a neighbor to the cell
     pub fn add_neighbor(&self, neighbor_x: usize, neighbor_y: usize, neighbor: Arc<Cell>) {
         let mut neighbors = self.neighbors.lock().unwrap();
 
         neighbors.insert((neighbor_x, neighbor_y), Arc::downgrade(&neighbor));
     }
 
+    /// Get the list of neighbors of the cell
     pub fn get_neighbors(&self) -> Vec<Arc<Cell>> {
         let neighbors = self.neighbors.lock().unwrap();
 
@@ -43,6 +58,7 @@ impl Cell {
             .collect()
     }
 
+    /// Get the number of alive neighbors of the cell
     pub fn count_alive_neighbors(&self) -> usize {
         let neighbors = self.neighbors.lock().unwrap();
 
@@ -53,6 +69,9 @@ impl Cell {
             .count()
     }
 
+    /// Calculates an offset position relative to the cell position and an offset.
+    /// Returns `Some(usize)` if the offset position is valid, `None` otherwise.
+    /// A position is valid if it does not overflow the `usize` type.
     pub fn offset_position(position: usize, offset: isize) -> Option<usize> {
         if offset < 0 {
             position.checked_sub(offset.abs() as usize)

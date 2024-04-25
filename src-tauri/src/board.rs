@@ -4,16 +4,27 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
+/// A struct representing a board
 #[derive(Debug)]
 pub struct Board {
+    /// The width of the board
     width: Mutex<usize>,
+
+    /// The height of the board
     height: Mutex<usize>,
+
+    /// The generation of the board
     generation: Mutex<usize>,
+
+    /// The list of cells on the board
     cells: DashMap<Uuid, Arc<Cell>>,
+
+    /// A map of cell positions to cell ids
     position_to_id: DashMap<(usize, usize), Uuid>,
 }
 
 impl Board {
+    /// Create a new board
     pub fn new() -> Self {
         Self {
             width: Mutex::new(0),
@@ -24,6 +35,7 @@ impl Board {
         }
     }
 
+    /// Set the size of the board
     fn set_size(&self, width: usize, height: usize) {
         let mut board_width = self.width.lock().unwrap();
         let mut board_height = self.height.lock().unwrap();
@@ -31,34 +43,41 @@ impl Board {
         *board_height = height;
     }
 
+    /// Increment the generation of the board by 1
     fn increment_generation(&self) {
         let mut generation = self.generation.lock().unwrap();
         *generation += 1;
     }
 
+    /// Get the current generation of the board
     fn get_generation(&self) -> usize {
         *self.generation.lock().unwrap()
     }
 
+    /// Reset the generation of the board to 0
     fn reset_generation(&self) {
         let mut generation = self.generation.lock().unwrap();
         *generation = 0;
     }
 
+    /// Add a cell to the board
     fn add_cell(&self, cell: Arc<Cell>) {
         self.cells.insert(cell.id, cell);
     }
 
+    /// Get a cell from the board by its id
     fn get_cell(&self, id: Uuid) -> Option<Arc<Cell>> {
         self.cells
             .get(&id)
             .map(|cell_ref| Arc::clone(&cell_ref.value()))
     }
 
+    /// Remove a cell from the board by its id
     fn remove_cell(&self, id: Uuid) {
         self.cells.remove(&id);
     }
 
+    /// Fill the board with cells
     fn fill_cells(&self) {
         let width = *self.width.lock().unwrap();
         let height = *self.height.lock().unwrap();
@@ -75,10 +94,19 @@ impl Board {
         });
     }
 
+    /// Find a cell on the board by its position
+    fn find_cell(&self, x: usize, y: usize) -> Option<Arc<Cell>> {
+        self.position_to_id
+            .get(&(x, y))
+            .and_then(|id| self.get_cell(*id))
+    }
+
+    /// Clear all cells from the board
     fn clear_cells(&self) {
         self.cells.clear();
     }
 
+    /// Compute the neighbors of each cell on the board
     fn compute_neighbors(&self) {
         let width = *self.width.lock().unwrap();
         let height = *self.height.lock().unwrap();
@@ -117,11 +145,13 @@ impl Board {
         });
     }
 
+    /// Reset the board to its initial state
     fn reset(&self) {
         self.reset_generation();
         self.clear_cells();
     }
 
+    /// Create a new board with the given width and height, filling it with cells and computing the neighbors
     pub fn create_board(&self, width: usize, height: usize) {
         self.reset();
 
