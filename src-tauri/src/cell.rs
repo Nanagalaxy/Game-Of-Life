@@ -1,3 +1,4 @@
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, Weak};
 use uuid::Uuid;
@@ -12,10 +13,10 @@ pub struct Cell {
     alive: Mutex<bool>,
 
     /// The x position of the cell
-    x: usize,
+    pub x: usize,
 
     /// The y position of the cell
-    y: usize,
+    pub y: usize,
 
     /// The list of neighbors of the cell
     neighbors: Mutex<HashMap<(usize, usize), Weak<Cell>>>,
@@ -53,7 +54,7 @@ impl Cell {
         let neighbors = self.neighbors.lock().unwrap();
 
         neighbors
-            .iter()
+            .par_iter()
             .filter_map(|(_, weak_neighbor)| weak_neighbor.upgrade()) // Upgrade the weak reference to a strong reference
             .collect()
     }
@@ -63,7 +64,7 @@ impl Cell {
         let neighbors = self.neighbors.lock().unwrap();
 
         neighbors
-            .iter()
+            .par_iter()
             .filter_map(|(_, weak_neighbor)| weak_neighbor.upgrade()) // Upgrade the weak reference to a strong reference
             .filter(|neighbor| *neighbor.alive.lock().unwrap()) // Filter out the neighbors that are not alive
             .count()
@@ -77,6 +78,18 @@ impl Cell {
             position.checked_sub(offset.abs() as usize)
         } else {
             position.checked_add(offset as usize)
+        }
+    }
+
+    /// Compute the future state of the cell
+    pub fn compute_future_state(&self) -> bool {
+        let alive = *self.alive.lock().unwrap();
+        let alive_neighbors = self.count_alive_neighbors();
+
+        match (alive, alive_neighbors) {
+            (true, 2) | (true, 3) => true,
+            (false, 3) => true,
+            _ => false,
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::cell::Cell;
 use dashmap::DashMap;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -66,7 +66,7 @@ impl Board {
     }
 
     /// Get a cell from the board by its id
-    fn get_cell(&self, id: Uuid) -> Option<Arc<Cell>> {
+    pub fn get_cell(&self, id: Uuid) -> Option<Arc<Cell>> {
         self.cells
             .get(&id)
             .map(|cell_ref| Arc::clone(&cell_ref.value()))
@@ -92,6 +92,14 @@ impl Board {
                 self.add_cell(new_cell);
             });
         });
+    }
+
+    /// Get a list of all cells on the board
+    pub fn get_cells(&self) -> Vec<Arc<Cell>> {
+        self.cells
+            .par_iter()
+            .map(|cell| Arc::clone(&cell.value()))
+            .collect()
     }
 
     /// Find a cell on the board by its position
@@ -160,5 +168,40 @@ impl Board {
         self.fill_cells();
 
         self.compute_neighbors();
+    }
+
+    /// Kill all cells on the board and reset the generation to 0
+    pub fn kill_board(&self) {
+        self.cells
+            .par_iter()
+            .for_each(|cell| cell.value().set_alive(false));
+
+        self.reset_generation();
+    }
+
+    /// Compute the next generation of the board
+    /// Returns a list of cell ids with their future state
+    pub fn compute_next_generation(&self) -> Vec<(Uuid, bool)> {
+        self.cells
+            .par_iter()
+            .map(|cell| {
+                let cell = cell.value();
+
+                let alive = cell.compute_future_state();
+
+                (cell.id, alive)
+            })
+            .collect()
+    }
+
+    /// Update the next generation of the board with the given list of cell ids and their future state
+    pub fn update_next_generation(&self, next_gen: &Vec<(Uuid, bool)>) {
+        next_gen.par_iter().for_each(|(id, alive)| {
+            if let Some(cell) = self.get_cell(*id) {
+                cell.set_alive(*alive);
+            }
+        });
+
+        self.increment_generation();
     }
 }

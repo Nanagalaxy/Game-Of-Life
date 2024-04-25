@@ -1,9 +1,9 @@
 import Board, {DrawType} from "./Board";
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
     menuHandler();
 
-    Board.instance.createBoard({width: 20, height: 20}, 20);
+    await Board.instance.createBoard({width: 20, height: 20}, 20);
 });
 
 function menuHandler(): void {
@@ -45,7 +45,7 @@ function menuHandler(): void {
             return;
         }
 
-        Board.instance.createBoard({width, height}, 20);
+        await Board.instance.createBoard({width, height}, 20);
     });
 
     const buttonKill: HTMLButtonElement | null =
@@ -56,7 +56,7 @@ function menuHandler(): void {
     }
 
     buttonKill.addEventListener("click", async () => {
-        Board.instance.killBoard();
+        await Board.instance.killBoard();
     });
 
     const buttonDraw: HTMLButtonElement | null =
@@ -93,7 +93,7 @@ function menuHandler(): void {
     }
 
     buttonStep.addEventListener("click", async () => {
-        Board.instance.step();
+        await Board.instance.step();
     });
 
     const buttonRun: HTMLButtonElement | null = document.querySelector("#run");

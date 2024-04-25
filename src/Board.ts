@@ -31,7 +31,7 @@ export default class Board {
 
         let isMouseDown: boolean = false;
 
-        this.board.addEventListener("mousedown", (event: MouseEvent) => {
+        this.board.addEventListener("mousedown", async (event: MouseEvent) => {
             if (event.buttons === 1) {
                 isMouseDown = true;
 
@@ -40,13 +40,13 @@ export default class Board {
                 );
 
                 if (cell) {
-                    const state: boolean = this.drawMode === DrawType.Alive;
+                    let state: boolean = this.drawMode === DrawType.Alive;
 
-                    if (state !== cell.alive) {
-                        cell.alive = state;
-                    } else {
-                        cell.toggleAlive();
+                    if (state === cell.alive) {
+                        state = !state;
                     }
+
+                    await this.updateCellState(cell, state);
                 }
             }
         });
@@ -55,14 +55,19 @@ export default class Board {
             isMouseDown = false;
         });
 
-        this.board.addEventListener("mouseover", (event: MouseEvent) => {
+        this.board.addEventListener("mouseover", async (event: MouseEvent) => {
             if (isMouseDown && event.buttons === 1) {
                 const cell: GameCell | undefined = this._cells.find(
                     (cell: GameCell) => cell === event.target,
                 );
 
-                if (cell) {
-                    cell.alive = this.drawMode === DrawType.Alive;
+                const state: boolean = this.drawMode === DrawType.Alive;
+
+                if (cell && cell.alive !== state) {
+                    await this.updateCellState(
+                        cell,
+                        this.drawMode === DrawType.Alive,
+                    );
                 }
             }
         });
@@ -76,6 +81,29 @@ export default class Board {
         this.board.addEventListener("mouseleave", () => {
             isMouseDown = false;
         });
+    }
+
+    private async updateCellState(
+        cell: GameCell,
+        state: boolean,
+    ): Promise<void> {
+        await invoke("update_cell_state", {
+            id: cell.id,
+            newState: state,
+        })
+            .then((response) => {
+                const result: [string, boolean] = response as [string, boolean];
+
+                const id: string = result[0];
+                const resultState: boolean = result[1];
+
+                if (id === cell.id && resultState) {
+                    cell.alive = state;
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+            });
     }
 
     public static get instance(): Board {
@@ -166,7 +194,7 @@ export default class Board {
         );
     }
 
-    public createBoard(size: Size, cellSize: number): void {
+    public async createBoard(size: Size, cellSize: number): Promise<void> {
         if (size.width < 1) {
             throw new Error(
                 `Width must be a positive number, got ${size.width}`,
@@ -189,6 +217,19 @@ export default class Board {
         this._cellSize = cellSize;
         this._cells = [];
 
+        let createdCells: [string, number, number][] = [];
+
+        await invoke("create_board", {
+            width: this._width,
+            height: this._height,
+        })
+            .then((response) => {
+                createdCells = response as [string, number, number][];
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+
         this.board.innerHTML = "";
 
         // Set grid-template-columns and grid-template-rows to repeat(size, 20px)
@@ -202,56 +243,48 @@ export default class Board {
         );
 
         // Create cells
-        for (let y = 0; y < size.height; y++) {
-            for (let x = 0; x < size.width; x++) {
-                const cell: GameCell = new GameCell(x, y);
+        for (const [id, x, y] of createdCells) {
+            const cell: GameCell = new GameCell(id, x, y);
 
-                cell.style.gridRowStart = (size.height - y).toString();
-                cell.style.gridColumnStart = (x + 1).toString();
+            cell.style.gridRowStart = (size.height - y).toString();
+            cell.style.gridColumnStart = (x + 1).toString();
 
-                this._cells.push(cell);
+            this._cells.push(cell);
 
-                this.board.appendChild(cell);
-            }
+            this.board.appendChild(cell);
         }
     }
 
-    public killBoard(): void {
+    public async killBoard(): Promise<void> {
+        await invoke("kill_board");
+
         this._cells.forEach((cell: GameCell) => {
             cell.alive = false;
         });
     }
 
     public async step(): Promise<void> {
-        let cells: Cell[] = [];
+        let status: [string, boolean][] = [];
 
-        await invoke("test_new_board")
+        await invoke("compute_next_gen")
             .then((response) => {
-                console.log(response);
+                status = response as [string, boolean][];
             })
             .catch((error) => {
                 console.error(error);
             });
 
-        await invoke("compute_next_gen", {
-            cells: this.cells(CellVersion.object),
-        })
-            .then((response) => {
-                cells = response as Cell[];
-            })
-            .catch((error) => {
-                console.error(error);
-            });
+        console.log(status);
 
-        this._cells.forEach((cell: GameCell) => {
-            const cellData: Cell | undefined = cells.find(
-                (c: Cell) => c.id === cell.id,
+        for (const [id, alive] of status) {
+            const cell: GameCell | undefined = this._cells.find(
+                (cell: GameCell) => cell.id === id,
             );
 
-            if (cellData) {
-                cell.alive = cellData.alive;
+            if (cell) {
+                cell.alive = alive;
             }
-        });
+        }
     }
 
     private async sleep(): Promise<void> {

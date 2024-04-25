@@ -14,14 +14,16 @@ export default class GameCell extends LitElement {
         }
     `;
 
-    @property({type: String}) readonly id = uuid();
+    @property({type: String, reflect: true}) readonly id;
     @property({type: Boolean, reflect: true}) alive = false;
-    @property({type: Number}) readonly x;
-    @property({type: Number}) readonly y;
+    @property({type: Number, reflect: true}) readonly x;
+    @property({type: Number, reflect: true}) readonly y;
     @property({type: Cell}) readonly cell;
 
-    constructor(x: number, y: number) {
+    constructor(id: string, x: number, y: number) {
         super();
+
+        this.id = id;
         this.x = x;
         this.y = y;
 
