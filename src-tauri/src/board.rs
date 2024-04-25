@@ -50,7 +50,8 @@ impl Board {
     }
 
     /// Get the current generation of the board
-    fn get_generation(&self) -> usize {
+    /// XXX: This function is not used
+    fn _get_generation(&self) -> usize {
         *self.generation.lock().unwrap()
     }
 
@@ -73,7 +74,8 @@ impl Board {
     }
 
     /// Remove a cell from the board by its id
-    fn remove_cell(&self, id: Uuid) {
+    /// XXX: This function is not used
+    fn _remove_cell(&self, id: Uuid) {
         self.cells.remove(&id);
     }
 
@@ -103,7 +105,8 @@ impl Board {
     }
 
     /// Find a cell on the board by its position
-    fn find_cell(&self, x: usize, y: usize) -> Option<Arc<Cell>> {
+    /// XXX: This function is not used
+    fn _find_cell(&self, x: usize, y: usize) -> Option<Arc<Cell>> {
         self.position_to_id
             .get(&(x, y))
             .and_then(|id| self.get_cell(*id))

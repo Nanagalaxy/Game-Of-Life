@@ -1,6 +1,5 @@
 import {LitElement, html, css} from "lit";
 import {customElement, property} from "lit/decorators.js";
-import {uuid} from "../Utils";
 import Cell from "../Cell";
 
 @customElement("game-cell")
@@ -14,10 +13,10 @@ export default class GameCell extends LitElement {
         }
     `;
 
-    @property({type: String, reflect: true}) readonly id;
+    @property({type: String}) readonly id;
     @property({type: Boolean, reflect: true}) alive = false;
-    @property({type: Number, reflect: true}) readonly x;
-    @property({type: Number, reflect: true}) readonly y;
+    @property({type: Number}) readonly x;
+    @property({type: Number}) readonly y;
     @property({type: Cell}) readonly cell;
 
     constructor(id: string, x: number, y: number) {

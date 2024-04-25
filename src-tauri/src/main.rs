@@ -33,16 +33,7 @@ fn create_board(
 ) -> Vec<(Uuid, usize, usize)> {
     let board = state.inner();
 
-    let time = std::time::Instant::now();
-
     board.create_board(width, height);
-
-    println!(
-        "Time to create board: {:?} with a size of {}x{}",
-        time.elapsed(),
-        width,
-        height
-    );
 
     board
         .get_cells()
@@ -55,9 +46,7 @@ fn create_board(
 fn kill_board(state: State<Arc<Board>>) {
     let board = state.inner();
 
-    let time = std::time::Instant::now();
     board.kill_board();
-    println!("Time to kill board: {:?}", time.elapsed());
 }
 
 #[tauri::command]
@@ -81,17 +70,9 @@ fn update_cell_state(state: State<Arc<Board>>, id: Uuid, new_state: bool) -> (Uu
 fn compute_next_gen(state: State<Arc<Board>>) -> Vec<(Uuid, bool)> {
     let board = state.inner();
 
-    let time = std::time::Instant::now();
-
     let next_gen = board.compute_next_generation();
 
     board.update_next_generation(&next_gen);
-
-    println!(
-        "Time to compute next generation: {:?} for {} cells",
-        time.elapsed(),
-        next_gen.len()
-    );
 
     next_gen
 }
