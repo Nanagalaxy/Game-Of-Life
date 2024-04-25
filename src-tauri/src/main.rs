@@ -3,7 +3,6 @@
 
 mod board;
 mod cell;
-mod cell_manager;
 
 use board::Board;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
