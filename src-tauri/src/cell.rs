@@ -10,7 +10,7 @@ pub struct Cell {
     pub id: Uuid,
 
     /// Whether the cell is alive or not
-    alive: Mutex<bool>,
+    pub alive: Mutex<bool>,
 
     /// The x position of the cell
     pub x: usize,

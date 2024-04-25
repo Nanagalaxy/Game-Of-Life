@@ -182,7 +182,9 @@ impl Board {
     /// Compute the next generation of the board
     /// Returns a list of cell ids with their future state
     pub fn compute_next_generation(&self) -> Vec<(Uuid, bool)> {
-        self.cells
+        let relevant_cells = self.get_relevant_cells();
+
+        relevant_cells
             .par_iter()
             .map(|cell| {
                 let cell = cell.value();
@@ -192,6 +194,35 @@ impl Board {
                 (cell.id, alive)
             })
             .collect()
+    }
+
+    /// Get the relevant cells for the next generation.
+    /// A cell is relevant if it is alive or is a neighbor of an alive cell.
+    fn get_relevant_cells(&self) -> DashMap<Uuid, Arc<Cell>> {
+        let relevant_cells = DashMap::new();
+
+        self.cells
+            .par_iter()
+            // Filter out the dead cells
+            .filter(|entry| *entry.value().alive.lock().unwrap())
+            .for_each(|entry| {
+                let cell = entry.value();
+                let cell_id = entry.key();
+
+                // Add the alive cell to the relevant cells
+                relevant_cells.insert(*cell_id, Arc::clone(&cell));
+
+                // Add the neighbors of the alive cell to the relevant cells
+                let neighbors = cell.get_neighbors();
+
+                for neighbor in neighbors {
+                    relevant_cells
+                        .entry(neighbor.id)
+                        .or_insert_with(|| Arc::clone(&neighbor));
+                }
+            });
+
+        relevant_cells
     }
 
     /// Update the next generation of the board with the given list of cell ids and their future state
