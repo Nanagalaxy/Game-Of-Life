@@ -15,7 +15,7 @@ body {
 }
 
 menu {
-    position: absolute;
+    position: fixed;
     top: 10px;
     margin: 0;
     padding: 0;
