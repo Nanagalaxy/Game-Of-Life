@@ -13,8 +13,9 @@
         "preview:vite": "vite preview",
         "dev:tauri": "tauri dev",
         "build:tauri": "tauri build",
+        "prebuild:tauri": "node ./preBuildTauri.cjs",
         "postbuild:tauri": "node ./postBuildTauri.cjs",
-        "build": "npm-run-all build:tauri postbuild:tauri"
+        "build": "npm-run-all prebuild:tauri build:tauri postbuild:tauri"
     },
     "dependencies": {
         "@tauri-apps/api": "^1.5.6",
