@@ -1,5 +1,4 @@
 import {invoke} from "@tauri-apps/api";
-import Cell from "./Cell";
 import GameCell from "./Components/GameCell";
 
 export default class Board {
@@ -146,12 +145,8 @@ export default class Board {
         };
     }
 
-    public cells(cellVer: CellVersion): GameCell[] | Cell[] {
-        if (cellVer === CellVersion.html) {
-            return this._cells;
-        } else {
-            return this._cells.map((cell: GameCell) => cell.cell);
-        }
+    public cells(): GameCell[] {
+        return this._cells;
     }
 
     public get cellSize(): number {
@@ -162,36 +157,20 @@ export default class Board {
         return this._cells.map((cell: GameCell) => cell.id);
     }
 
-    public aliveCells(cellVer: CellVersion): GameCell[] | Cell[] {
-        if (cellVer === CellVersion.html) {
-            return this._cells.filter((cell: GameCell) => cell.alive);
-        } else {
-            return this._cells
-                .filter((cell: GameCell) => cell.alive)
-                .map((cell: GameCell) => cell.cell);
-        }
+    public aliveCells(): GameCell[] {
+        return this._cells.filter((cell) => cell.alive);
     }
 
     public get aliveCellsIds(): string[] {
-        return (this.aliveCells(CellVersion.html) as GameCell[]).map(
-            (cell: GameCell) => cell.id,
-        );
+        return this.aliveCells().map((cell) => cell.id);
     }
 
-    public deadCells(cellVer: CellVersion): GameCell[] | Cell[] {
-        if (cellVer === CellVersion.html) {
-            return this._cells.filter((cell: GameCell) => !cell.alive);
-        } else {
-            return this._cells
-                .filter((cell: GameCell) => !cell.alive)
-                .map((cell: GameCell) => cell.cell);
-        }
+    public deadCells(): GameCell[] {
+        return this._cells.filter((cell) => !cell.alive);
     }
 
     public get deadCellsIds(): string[] {
-        return (this.deadCells(CellVersion.html) as GameCell[]).map(
-            (cell: GameCell) => cell.id,
-        );
+        return this.deadCells().map((cell) => cell.id);
     }
 
     public async createBoard(size: Size, cellSize: number): Promise<void> {

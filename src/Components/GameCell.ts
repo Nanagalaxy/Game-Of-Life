@@ -1,6 +1,5 @@
 import {LitElement, html, css} from "lit";
 import {customElement, property} from "lit/decorators.js";
-import Cell from "../Cell";
 
 @customElement("game-cell")
 export default class GameCell extends LitElement {
@@ -17,7 +16,6 @@ export default class GameCell extends LitElement {
     @property({type: Boolean, reflect: true}) alive = false;
     @property({type: Number}) readonly x;
     @property({type: Number}) readonly y;
-    @property({type: Cell}) readonly cell;
 
     constructor(id: string, x: number, y: number) {
         super();
@@ -25,8 +23,6 @@ export default class GameCell extends LitElement {
         this.id = id;
         this.x = x;
         this.y = y;
-
-        this.cell = new Cell(this);
     }
 
     public toggleAlive(): void {
@@ -35,9 +31,5 @@ export default class GameCell extends LitElement {
 
     render() {
         return html`<div></div>`;
-    }
-
-    updated() {
-        this.cell.alive = this.alive;
     }
 }
