@@ -1,8 +1,8 @@
 import {LitElement, html, css} from "lit";
 import {customElement, property} from "lit/decorators.js";
 
-@customElement("game-cell")
-export default class GameCell extends LitElement {
+@customElement("cell")
+export default class Cell extends LitElement {
     static readonly styles = css`
         :host {
             background-color: rgba(255, 255, 255, 1);

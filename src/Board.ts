@@ -1,5 +1,5 @@
 import {invoke} from "@tauri-apps/api";
-import GameCell from "./Components/GameCell";
+import Cell from "./Cell";
 
 export default class Board {
     private static _instance: Board;
@@ -15,7 +15,7 @@ export default class Board {
 
     private _cellSize: number = 0;
 
-    private _cells: GameCell[] = [];
+    private _cells: Cell[] = [];
 
     public drawMode: DrawType = DrawType.Alive;
 
@@ -34,8 +34,8 @@ export default class Board {
             if (event.buttons === 1) {
                 isMouseDown = true;
 
-                const cell: GameCell | undefined = this._cells.find(
-                    (cell: GameCell) => cell === event.target,
+                const cell: Cell | undefined = this._cells.find(
+                    (cell: Cell) => cell === event.target,
                 );
 
                 if (cell) {
@@ -56,8 +56,8 @@ export default class Board {
 
         this.board.addEventListener("mouseover", async (event: MouseEvent) => {
             if (isMouseDown && event.buttons === 1) {
-                const cell: GameCell | undefined = this._cells.find(
-                    (cell: GameCell) => cell === event.target,
+                const cell: Cell | undefined = this._cells.find(
+                    (cell: Cell) => cell === event.target,
                 );
 
                 const state: boolean = this.drawMode === DrawType.Alive;
@@ -82,10 +82,7 @@ export default class Board {
         });
     }
 
-    private async updateCellState(
-        cell: GameCell,
-        state: boolean,
-    ): Promise<void> {
+    private async updateCellState(cell: Cell, state: boolean): Promise<void> {
         await invoke("update_cell_state", {
             id: cell.id,
             newState: state,
@@ -145,7 +142,7 @@ export default class Board {
         };
     }
 
-    public cells(): GameCell[] {
+    public cells(): Cell[] {
         return this._cells;
     }
 
@@ -154,10 +151,10 @@ export default class Board {
     }
 
     public get cellsIds(): string[] {
-        return this._cells.map((cell: GameCell) => cell.id);
+        return this._cells.map((cell: Cell) => cell.id);
     }
 
-    public aliveCells(): GameCell[] {
+    public aliveCells(): Cell[] {
         return this._cells.filter((cell) => cell.alive);
     }
 
@@ -165,7 +162,7 @@ export default class Board {
         return this.aliveCells().map((cell) => cell.id);
     }
 
-    public deadCells(): GameCell[] {
+    public deadCells(): Cell[] {
         return this._cells.filter((cell) => !cell.alive);
     }
 
@@ -223,7 +220,7 @@ export default class Board {
 
         // Create cells
         for (const [id, x, y] of createdCells) {
-            const cell: GameCell = new GameCell(id, x, y);
+            const cell: Cell = new Cell(id, x, y);
 
             cell.style.gridRowStart = (size.height - y).toString();
             cell.style.gridColumnStart = (x + 1).toString();
@@ -237,7 +234,7 @@ export default class Board {
     public async killBoard(): Promise<void> {
         await invoke("kill_board");
 
-        this._cells.forEach((cell: GameCell) => {
+        this._cells.forEach((cell: Cell) => {
             cell.alive = false;
         });
     }
@@ -256,8 +253,8 @@ export default class Board {
         console.log(status);
 
         for (const [id, alive] of status) {
-            const cell: GameCell | undefined = this._cells.find(
-                (cell: GameCell) => cell.id === id,
+            const cell: Cell | undefined = this._cells.find(
+                (cell: Cell) => cell.id === id,
             );
 
             if (cell) {
@@ -296,9 +293,4 @@ export type Size = {
 export enum DrawType {
     Dead,
     Alive,
-}
-
-export enum CellVersion {
-    html,
-    object,
 }
