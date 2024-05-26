@@ -28,6 +28,10 @@ export default class Board {
             this.board = board;
         }
 
+        this.setupListeners();
+    }
+
+    private setupListeners(): void {
         let isMouseDown: boolean = false;
 
         this.board.addEventListener("mousedown", async (event: MouseEvent) => {
